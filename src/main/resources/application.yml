@@ -1,0 +1,68 @@
+logging:
+    #file:
+        #name: logs/zeropie.log
+    level:
+        jdbc:
+            connection: info
+            resultsettable: info
+            sqlonly: info
+            sqltiming: info
+        root: info
+mybatis:
+    mapper-locations: classpath:mappers/**/*.xml
+
+server:
+    port: 8080
+    servlet:
+        context-path: /zeropie
+
+spring:
+    application:
+        name: community-site-back-team1
+
+    datasource:
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        password: Abcd1234!
+        url: jdbc:mysql://15.165.24.202/zeropie
+        username: team1
+    devtools:
+        livereload:
+            enabled: true
+        restart:
+            enabled: false
+
+
+    # JPA 설정
+    jpa:
+        database: mysql
+        hibernate:
+            ddl-auto: none
+            naming:
+                physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+        properties:
+            hibernate:
+                format_sql: true
+                show_sql: true
+
+    servlet:
+        multipart:
+            location: uploads/
+            max-file-size: 10MB
+
+
+jwt:
+    issuer: hyeji111544@gmail.com
+    secret: 4XudNUpSmog3lwI9thJFejF7YfBBQnCI
+
+
+
+
+# 파일 업로드 설정
+file:
+    # 개발용
+    upload:
+        path: uploads/
+
+     #upload:
+        #path: /home/zeropie/uploads/
+
