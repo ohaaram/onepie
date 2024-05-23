@@ -1,7 +1,9 @@
 package kr.co.zeroPie.dto;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Date;
 
@@ -42,4 +44,9 @@ public class StfDTO {
     private int rnkNo;//직급 번호
 
     private int planStatusNo;//요금제 상태번호
+
+    @JsonIgnore
+    private MultipartFile thumbFile;
+
+    private String profile;
 }
