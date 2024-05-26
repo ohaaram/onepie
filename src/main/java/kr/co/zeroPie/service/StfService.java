@@ -5,6 +5,7 @@ import jakarta.mail.Message;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import kr.co.zeroPie.dto.StfDTO;
 import kr.co.zeroPie.entity.Dpt;
@@ -18,6 +19,8 @@ import lombok.extern.log4j.Log4j2;
 import net.coobird.thumbnailator.Thumbnails;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -40,6 +43,7 @@ public class StfService {
     private final ModelMapper modelMapper;
 
     private final JavaMailSender javaMailSender;
+    private final RedisTemplate<String, String> redisTemplate;
 
 
 
@@ -253,7 +257,7 @@ public class StfService {
     private String sender;
 
     //인증코드를 전송
-    public void sendEmailCode(HttpSession session,String receiver){
+    public void sendEmailCode(String receiver){
 
         log.info("sender={}", sender);
 
@@ -263,16 +267,18 @@ public class StfService {
         //인증코드 생성 후 세션 저장
         String code = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 1000000));
 
-        session.setAttribute("code1", code);
+        log.info("생성된 code : "+code);
+
+
+        //redis 사용
+        ValueOperations<String, String> valueOperations = redisTemplate.opsForValue();
+
+        valueOperations.set("code1",code);
 
         log.info("code={}", code);
 
         String title = "lotteShop 인증코드 입니다.";
         String content = "<h1>인증코드는 " + code + "입니다.<h1>";
-
-         String session123 = (String)session.getAttribute("code1");
-
-         log.info("방금 저장한 세션 불러오기 :" +session123);
 
         try {
             message.setSubject(title);
