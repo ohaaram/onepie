@@ -27,11 +27,15 @@ public class QCs extends EntityPathBase<Cs> {
 
     public final NumberPath<Integer> csNo = createNumber("csNo", Integer.class);
 
-    public final DatePath<java.time.LocalDate> csRdate = createDate("csRdate", java.time.LocalDate.class);
+    public final DateTimePath<java.time.LocalDateTime> csRdate = createDateTime("csRdate", java.time.LocalDateTime.class);
 
     public final NumberPath<Integer> csReply = createNumber("csReply", Integer.class);
 
     public final StringPath csTitle = createString("csTitle");
+
+    public final StringPath secret = createString("secret");
+
+    public final StringPath stfName = createString("stfName");
 
     public final StringPath stfNo = createString("stfNo");
 

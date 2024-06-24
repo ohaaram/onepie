@@ -1,19 +1,28 @@
 package kr.co.zeroPie.controller.article;
 
-import jakarta.servlet.http.HttpSession;
 import kr.co.zeroPie.dto.ArticleDTO;
 import kr.co.zeroPie.dto.ArticlePageRequestDTO;
 import kr.co.zeroPie.dto.ArticlePageResponseDTO;
 import kr.co.zeroPie.service.ArticleService;
+import kr.co.zeroPie.service.FileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Collections;
+import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -21,69 +30,86 @@ import java.util.List;
 public class ArticleController {
 
     private final ArticleService articleService;
+    private final FileService fileService;
 
+    // 게시판 카테고리 출력
+    @GetMapping("/article")
+    public ResponseEntity<?> getArticleCate(@RequestParam("articleCateNo") int articleCateNo) {
+        log.info("현재 카테고리 : " + articleCateNo);
+        return articleService.selectArticleCate(articleCateNo);
+    }
 
-    // 게시판(리스트형) 출력(post로 바꾸기)
+    // 게시판 글목록(list)
     @PostMapping("/article/list")
     public ResponseEntity<?> articleList(@RequestBody ArticlePageRequestDTO articlePageRequestDTO) {
 
         ArticlePageResponseDTO articlePageResponseDTO = new ArticlePageResponseDTO();
-        log.info("articlePageResponseDTO"+ articlePageRequestDTO.toString());
+        log.info("list 출력");
 
         if (articlePageRequestDTO.getType() == null) {
-
             // 일반 글 목록 조회
             articlePageResponseDTO = articleService.selectArticles(articlePageRequestDTO);
-            log.info("일반글");
-        } else {
+            log.info("일반글 조회 : " + articlePageResponseDTO);
 
+        } else {
             // 검색 글 목록 조회
             articlePageResponseDTO = articleService.searchArticles(articlePageRequestDTO);
-            log.info("검색글");
-        }
-        log.info("articlePageResponseDTO : " + articlePageResponseDTO);
-        return ResponseEntity.status(HttpStatus.OK).body(articlePageResponseDTO);
-    }
-
-
-    // 게시판(카드형) 출력(post로 바꾸기)
-    @GetMapping("/article/card")
-    public ResponseEntity<?> articleCard(@RequestParam("articleCateNo") String articleCateNo,
-                                  ArticlePageRequestDTO articlePageRequestDTO) {
-
-        ArticlePageResponseDTO articlePageResponseDTO;
-        log.info("articlePageResponseDTO"+ articlePageRequestDTO.toString());
-        log.info("articlePageRequestDTO"+articleCateNo);
-
-        if (articlePageRequestDTO.getType() == null) {
-
-            // 일반 글 목록 조회
-            articlePageResponseDTO = articleService.selectArticles(articlePageRequestDTO);
-            log.info("일반글");
-        } else {
-
-            // 검색 글 목록 조회
-            articlePageResponseDTO = articleService.searchArticles(articlePageRequestDTO);
-            log.info("검색글");
+            log.info("검색글 조회 : " + articlePageResponseDTO);
         }
         return ResponseEntity.status(HttpStatus.OK).body(articlePageResponseDTO);
     }
 
-    // 글쓰기(폼)
+    // 게시판 글쓰기 Form
     @GetMapping("/article/write")
-    public ResponseEntity<?> writeForm(@RequestParam("articleCateNo") String articleCateNo) {
-
+    public ResponseEntity<?> articleWriteForm(@RequestParam("articleCateNo") String articleCateNo) {
+        log.info("글쓰기");
         return ResponseEntity.status(HttpStatus.OK).body("글쓰기 폼으로 이동");
+    }
+
+    // 게시판 글쓰기 Function
+    @PostMapping("/article/write")
+    public ResponseEntity<?> articleWrite(@ModelAttribute ArticleDTO articleDTO) {
+        return articleService.articleWrite(articleDTO);
+    }
+
+    @PostMapping("/article/uploadImage")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) {
+        try {
+            log.info("Uploading image: " + file.getOriginalFilename());
+            String originalFilename = file.getOriginalFilename();
+            String extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
+            String fileName = UUID.randomUUID().toString() + "." + extension;
+
+            Path uploadPath = Paths.get("uploads/orgArtImage");
+
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            try (InputStream inputStream = file.getInputStream()) {
+                Path filePath = uploadPath.resolve(fileName);
+                Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            log.info("Image uploaded successfully: " + fileName);
+            return ResponseEntity.ok(Collections.singletonMap("name", fileName));
+        } catch (IOException e) {
+            log.error("Image upload failed: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.singletonMap("message", "Image upload failed"));
+        }
     }
 
     // 게시판 글보기
     @GetMapping("/article/view")
-    public ResponseEntity<?> view(@RequestParam("articleNo") int articleNo) {
+    public ResponseEntity<?> articleView(@RequestParam("articleNo") int articleNo) {
+        log.info("글보기");
+
+        // 조회수 증가 로직 추가
+        articleService.updateHit(articleNo);
 
         // 게시글 ID로 게시글 조회
         ArticleDTO articleDTO = articleService.findById(articleNo);
-        log.info(articleDTO.toString());
-        // 조회된 데이터를 articlePageRequestDTO에 설정
 
         // ResponseEntity로 응답 DTO 반환
         return ResponseEntity.status(HttpStatus.OK).body(articleDTO);
@@ -91,46 +117,31 @@ public class ArticleController {
 
     // 게시판 글수정(폼)
     @GetMapping("/article/modify")
-    public ResponseEntity<?> articleModifyFrom(@RequestParam("articleNo") int articleNo){
+    public ResponseEntity<?> articleModifyForm(@RequestParam("articleNo") int articleNo){
+        log.info("글수정");
 
         return articleService.articleView(articleNo);
     }
 
+    // 게시판 글수정(기능)
+    @PostMapping("/article/modify")
+    public ResponseEntity<?> articleModify(@RequestBody ArticleDTO articleDTO){
+        log.info(String.valueOf(articleDTO.getArticleNo()));
 
-/*
-    // 글쓰기(기능)
-    @PostMapping("/croptalk/write")
-    public String croptalkWrite(@ModelAttribute ArticleDTO articleDTO, HttpServletRequest request) {
+        log.info("글수정 완료");
 
-        articleDTO.setRegip(request.getRemoteAddr());
-        articleService.insertArticle(articleDTO);
-
-        log.info(articleDTO.toString());
-
-        return "redirect:/croptalk/list?cate=" + articleDTO.getCate();
+        return articleService.articleModify(articleDTO);
     }
 
-    // 글수정(기능)
-    @PostMapping("/croptalk/modify")
-    public String croptalkModify(ArticleDTO articleDTO) {
+    // 게시판 글삭제
+    @PostMapping("/article/delete")
+    public ResponseEntity<?> articleDelete(@RequestBody Map<String, Integer> request) {
 
-        articleService.modifyArticle(articleDTO);
+        int articleNo = request.get("articleNo");
+        //fileService.deleteFiles(articleNo);
 
-        return "redirect:/croptalk/view?no=" + articleDTO.getNo()+"&cate="+articleDTO.getCate();
+        log.info("글 삭제 완료");
+
+        return articleService.articleDelete(articleNo);
     }
-
-    // 글삭제(기능)
-    @GetMapping("/croptalk/delete")
-    public String croptalkDelete(int no, String cate) {
-        fileService.deleteFiles(no);
-        articleService.deleteArticle(no);
-
-        return "redirect:/croptalk/list?cate=" + cate;
-    }
-
-
-
-
-
-     */
 }

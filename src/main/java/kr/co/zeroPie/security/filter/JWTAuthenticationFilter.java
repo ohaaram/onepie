@@ -49,10 +49,10 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         // 토큰 검사
         if(token != null){
             try{
-                log.info("doFilterInternal...4");
+                //log.info("doFilterInternal...4");
                 jwtProvider.validateToken(token);
 
-                log.info("doFilterInternal...5");
+                //log.info("doFilterInternal...5");
                 // 시큐리티 인증 처리
                 Authentication authentication = jwtProvider.getAuthentication(token);
                 SecurityContextHolder.getContext().setAuthentication(authentication);

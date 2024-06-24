@@ -5,10 +5,14 @@ import kr.co.zeroPie.entity.Article;
 import kr.co.zeroPie.entity.ArticleCate;
 import kr.co.zeroPie.entity.Stf;
 import kr.co.zeroPie.repository.ArticleCateRepository;
+import kr.co.zeroPie.repository.ArticleRepository;
 import kr.co.zeroPie.repository.StfRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -24,13 +28,17 @@ public class AdminArticleService {
 
     private final ModelMapper modelMapper;
     private final ArticleCateRepository articleCateRepository;
+    private final ArticleRepository articleRepository;
 
     // 게시물 카테고리 추가
+    @CacheEvict(value = "cateCache", allEntries = true)
     public ResponseEntity<?> insertArticleCate(ArticleCateDTO articleCateDTO) {
         ArticleCate articleCate = modelMapper.map(articleCateDTO, ArticleCate.class);
         articleCate.setArticleCateName(articleCateDTO.getArticleCateName());
+        articleCate.setArticleCateOutput(articleCateDTO.getArticleCateOutput());
         articleCate.setArticleCateStatus(articleCateDTO.getArticleCateStatus());
-        articleCate.setArticleCateRole(articleCateDTO.getArticleCateRole());
+        articleCate.setArticleCateVRole(articleCateDTO.getArticleCateVRole());
+        articleCate.setArticleCateWRole(articleCateDTO.getArticleCateWRole());
         articleCate.setArticleCateCoRole(articleCateDTO.getArticleCateCoRole());
 
         ArticleCate result = articleCateRepository.save(articleCate);
@@ -42,14 +50,30 @@ public class AdminArticleService {
         }
     }
 
-    // 게시물 카테고리 조회 
+    // 게시물 카테고리 조회
+    @Cacheable("cateCache")
     public ResponseEntity<?> selectArticleCates() {
         List<ArticleCate> articleCates = (List<ArticleCate>) articleCateRepository.findAll();
-       log.info(articleCates.toString());
-       return new ResponseEntity<>(articleCates, HttpStatus.OK);
+        List<ArticleCateDTO> articleCateDTOList = new ArrayList<>();
+        for(ArticleCate articleCate : articleCates) {
+            int articleCount = articleRepository.countByArticleCateNo(articleCate.getArticleCateNo());
+            ArticleCateDTO articleCateDTO = ArticleCateDTO.builder()
+                    .articleCateNo(articleCate.getArticleCateNo())
+                    .articleCateName(articleCate.getArticleCateName())
+                    .articleCateStatus(articleCate.getArticleCateStatus())
+                    .articleCateVRole(articleCate.getArticleCateVRole())
+                    .articleCateWRole(articleCate.getArticleCateWRole())
+                    .articleCateCoRole(articleCate.getArticleCateCoRole())
+                    .articleCount(articleCount)
+                    .build();
+            articleCateDTOList.add(articleCateDTO);
+        }
+       log.info(articleCateDTOList.toString());
+       return new ResponseEntity<>(articleCateDTOList, HttpStatus.OK);
     }
 
     // 게시물 카테고리 삭제
+    @CacheEvict(value = "cateCache", allEntries = true)
     public ResponseEntity<?> deleteArticleCate(int articleCateNo) {
         try {
             articleCateRepository.deleteById(articleCateNo);
@@ -60,6 +84,7 @@ public class AdminArticleService {
     }
 
     // 게시물 카테고리 수정
+    @CacheEvict(value = "cateCache", allEntries = true)
     public ResponseEntity<?> modifyArticleCate(ArticleCateDTO articleCateDTO) {
         int articleCateNo = articleCateDTO.getArticleCateNo();
 
@@ -69,10 +94,12 @@ public class AdminArticleService {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
+
     private ArticleCate updateArticleCate(ArticleCate articleCate, ArticleCateDTO articleCateDTO) {
         articleCate.setArticleCateName(articleCateDTO.getArticleCateName());
         articleCate.setArticleCateStatus(articleCateDTO.getArticleCateStatus());
-        articleCate.setArticleCateRole(articleCateDTO.getArticleCateRole());
+        articleCate.setArticleCateVRole(articleCateDTO.getArticleCateVRole());
+        articleCate.setArticleCateWRole(articleCateDTO.getArticleCateWRole());
         articleCate.setArticleCateCoRole(articleCateDTO.getArticleCateCoRole());
         return articleCateRepository.save(articleCate);
     }

@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 
@@ -36,13 +37,18 @@ public class Stf {
 
     private String stfEmail;
 
-    private Date stfEnt;//입사일자
+    @CreationTimestamp
+    private LocalDate stfEnt;//입사일자
 
     private Date stfQuit;//퇴사일자
 
     private String stfImg;//사원 증명사진
     
     private String stfRole;//사원 권한
+
+    private String stfStatus;//사원 상태
+
+    private LocalDate stfBirth;
 
     private int dptNo;//부서번호
 
